@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<title>Sistema SAFRI</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#1b1f24;--mut:#667085;--line:#e3e6ea;--acc:#0f766e;--accbg:#e6f4f2;--neg:#b42318;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14171a;--card:#1d2125;--tx:#eceff2;--mut:#98a2b3;--line:#2e343a;--acc:#2dd4bf;--accbg:#12302d;--neg:#f97066;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#14171a;--card:#1d2125;--tx:#eceff2;--mut:#98a2b3;--line:#2e343a;--acc:#2dd4bf;--accbg:#12302d;--neg:#f97066;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:Arial,Helvetica,sans-serif;font-size:15px}
+main{max-width:1000px;margin:0 auto;padding:16px}
+h1{font-size:20px;margin:0 0 4px}h2{font-size:15px;margin:18px 0 8px}
+.sub{color:var(--mut);font-size:13px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--mut)}.dot.on{background:var(--acc)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;gap:6px;background:var(--card);border-top:1px solid var(--line);padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+nav.tabs button{flex:1;border:0;background:transparent;color:var(--mut);padding:10px 4px;font-size:13px}
+nav.tabs button.on{background:var(--accbg);color:var(--acc);font-weight:700}
+main{padding-bottom:96px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+.card small{color:var(--mut);display:block;font-size:12px}.card b{font-size:21px}
+.card.hl{background:var(--accbg);border-color:var(--acc)}
+button,select{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);color:var(--tx);border-radius:8px;padding:6px 10px}
+button.pri{background:var(--acc);color:var(--card);border-color:var(--acc)}
+button.danger{color:var(--neg)}
+.wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;min-width:720px}
+th,td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th{font-size:12px;color:var(--mut);font-weight:600;background:var(--bg)}
+th:first-child,td:first-child{text-align:left}
+td.n{color:var(--mut);width:28px;text-align:center}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 6px}
+input.name{width:150px}input.q{width:56px;text-align:center}input.p{width:64px}
+.cnt{display:inline-flex;gap:3px;align-items:center}.cnt button{padding:3px 8px}
+tfoot td{font-weight:700;background:var(--accbg);border-bottom:0}
+.neto{color:var(--acc);font-weight:700}.neg{color:var(--neg)}
+.note{color:var(--mut);font-size:12px;margin-top:10px}
+#entForm{display:none;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px}
+#entForm .bar{margin:0}
+#login{display:none;position:fixed;inset:0;background:var(--bg);z-index:20;align-items:center;justify-content:center}
+#login form{width:min(340px,92vw);display:grid;gap:10px}#login input{width:100%;padding:9px}
+</style>
+</head>
+<body>
+<div id="login"><form id="lf" class="card"><h1>Sistema SAFRI</h1><input id="lE" type="email" placeholder="Correo" autocomplete="username" required><input id="lP" type="password" placeholder="Contraseña" autocomplete="current-password" required><button class="pri">Entrar</button><small id="lM" class="neg"></small></form></div>
+<main>
+<h1>Sistema SAFRI</h1>
+<div class="sub"><span class="dot" id="dot"></span><span id="status">Conectando…</span><span>· En vivo para todos los socios</span></div>
+<div class="bar">
+  <label>Mes: <select id="mes"></select></label>
+  <button id="pdf" class="pri">Exportar PDF</button>
+</div>
+<div id="entForm"><div class="bar">
+  <b>Dejar fichas a:</b><select id="eV"></select>
+  <label>$10 <input id="eA" class="q" type="number" min="0" value="0"></label>
+  <label>$25 <input id="eB" class="q" type="number" min="0" value="0"></label>
+  <button id="eAdd" class="pri">Registrar entrega</button>
+</div></div>
+<div id="view"></div>
+<nav class="tabs"><button data-t="c" class="on">📋 Cuentas</button><button data-t="e">🎟️ Entregas</button><button data-t="h">📅 Historial</button></nav>
+<p class="note" id="note"></p>
+</main>
+<script>
+const N=20,P10=10,P25=25;
+let ids=[];const buildIds=n=>{ids=Array.from({length:n},(_,i)=>"v"+String(i+1).padStart(2,"0"))};buildIds(N);
+const st={names:{},ventas:{},ent:[],meses:{},pct0:15};
+const now=new Date(),CUR=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0");
+let ym=CUR,tab="c",db=null,loaded=false,pending=false,dl=null;
+const chain={},$=i=>document.getElementById(i);
+const money=x=>"$"+(Math.round(x*100)/100).toLocaleString("es-MX");
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const nm=(id,i)=>st.names[id]||"Vendedor "+(i+1);
+const mlabel=m=>new Date(m+"-01T12:00:00").toLocaleDateString("es-MX",{month:"long",year:"numeric"});
+const sale=(m,id)=>st.ventas[m+"_"+id]||{a:0,b:0};
+const pct=m=>st.meses[m]!=null?st.meses[m]:st.pct0;
+function sums(m){let a=0,b=0;ids.forEach(id=>{const r=sale(m,id);a+=r.a;b+=r.b});const v=a*P10+b*P25,c=v*pct(m)/100;return{a,b,v,c,n:v-c}}
+function ents(id,m){let a=0,b=0;st.ent.forEach(e=>{if(e.v===id&&(m==null||e.ym===m)){a+=e.a;b+=e.b}});return{a,b}}
+function sold(id,m){let a=0,b=0;Object.values(st.ventas).forEach(r=>{if(r.v===id&&(m==null||r.ym===m)){a+=r.a;b+=r.b}});return{a,b}}
+function months(){const s=new Set([CUR,ym]);Object.values(st.ventas).forEach(r=>s.add(r.ym));st.ent.forEach(e=>s.add(e.ym));Object.keys(st.meses).forEach(k=>s.add(k));return[...s].sort().reverse()}
+const fdate=t=>new Date(t).toLocaleString("es-MX",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
+
+function viewC(){
+  const t=sums(ym);let h=`<div class="cards">
+  <div class="card"><small>Fichas de $10</small><b>${t.a}</b></div><div class="card"><small>Fichas de $25</small><b>${t.b}</b></div>
+  <div class="card"><small>Venta total</small><b>${money(t.v)}</b></div><div class="card"><small>Comisiones (${pct(ym)}%)</small><b>${money(t.c)}</b></div>
+  <div class="card hl"><small>Neto para SAFRI</small><b>${money(t.n)}</b></div></div>
+  <div class="bar"><label>Comisión de este mes: <input class="p" id="pct" type="number" min="0" max="100" step="0.5" value="${pct(ym)}"> %</label> <button id="saveN" class="pri">💾 Guardar vendedores</button> <button id="addN">➕ Agregar vendedor</button></div>
+  <div class="wrap"><table><thead><tr><th>#</th><th>Vendedor</th><th>Fichas $10</th><th>Fichas $25</th><th>Vendido</th><th>Comisión</th><th>Neto SAFRI</th><th></th></tr></thead><tbody>`;
+  ids.forEach((id,i)=>{const r=sale(ym,id),v=r.a*P10+r.b*P25,c=v*pct(ym)/100;
+    const cn=f=>`<span class="cnt"><button data-id="${id}" data-f="${f}" data-d="-1">−</button><input class="q" type="number" min="0" data-id="${id}" data-f="${f}" value="${r[f]}"><button data-id="${id}" data-f="${f}" data-d="1">+</button></span>`;
+    h+=`<tr><td class="n">${i+1}</td><td><input class="name" data-id="${id}" data-f="n" value="${esc(nm(id,i))}"></td><td>${cn("a")}</td><td>${cn("b")}</td><td>${money(v)}</td><td>${money(c)}</td><td class="neto">${money(v-c)}</td><td><button data-clr="${id}">Poner en 0</button></td></tr>`});
+  return h+`</tbody><tfoot><tr><td></td><td>TOTAL</td><td>${t.a}</td><td>${t.b}</td><td>${money(t.v)}</td><td>${money(t.c)}</td><td>${money(t.n)}</td><td></td></tr></tfoot></table></div>
+  <div class="bar" style="margin-top:14px"><button class="danger" data-wipe="${ym}">Borrar todo ${mlabel(ym)}</button></div>`}
+
+function viewE(){
+  let h=`<h2>Resumen por vendedor (${mlabel(ym)})</h2><div class="wrap"><table><thead><tr><th>Vendedor</th><th>Entregadas $10</th><th>Entregadas $25</th><th>Vendidas $10</th><th>Vendidas $25</th><th>En su poder $10*</th><th>En su poder $25*</th></tr></thead><tbody>`;
+  ids.forEach((id,i)=>{const e=ents(id,ym),s=sold(id,ym),ea=ents(id),sa=sold(id),pa=ea.a-sa.a,pb=ea.b-sa.b;
+    h+=`<tr><td>${esc(nm(id,i))}</td><td>${e.a}</td><td>${e.b}</td><td>${s.a}</td><td>${s.b}</td><td class="${pa<0?"neg":""}">${pa}</td><td class="${pb<0?"neg":""}">${pb}</td></tr>`});
+  h+=`</tbody></table></div><h2>Entregas registradas en ${mlabel(ym)}</h2><div class="wrap"><table><thead><tr><th>Fecha</th><th>Vendedor</th><th>$10</th><th>$25</th><th></th></tr></thead><tbody>`;
+  const l=st.ent.filter(e=>e.ym===ym).sort((a,b)=>b.ts-a.ts);
+  l.forEach(e=>{h+=`<tr><td>${fdate(e.ts)}</td><td>${esc(nm(e.v,ids.indexOf(e.v)))}</td><td>${e.a}</td><td>${e.b}</td><td><button class="danger" data-del="${e.id}">Borrar</button></td></tr>`});
+  if(!l.length)h+=`<tr><td colspan="5" style="text-align:center;color:var(--mut)">Aún no hay entregas este mes</td></tr>`;
+  return h+`</tbody></table></div>`}
+
+function viewH(){
+  let h=`<div class="wrap"><table><thead><tr><th>Mes</th><th>Fichas $10</th><th>Fichas $25</th><th>Venta</th><th>Comisión</th><th>Neto</th><th>Entregadas $10/$25</th><th></th></tr></thead><tbody>`;
+  months().forEach(m=>{const t=sums(m);let ea=0,eb=0;st.ent.forEach(e=>{if(e.ym===m){ea+=e.a;eb+=e.b}});
+    h+=`<tr><td>${mlabel(m)}</td><td>${t.a}</td><td>${t.b}</td><td>${money(t.v)}</td><td>${money(t.c)}</td><td class="neto">${money(t.n)}</td><td>${ea} / ${eb}</td><td><button data-open="${m}">Abrir</button> <button class="danger" data-wipe="${m}">Borrar</button></td></tr>`});
+  return h+`</tbody></table></div><div class="bar" style="margin-top:14px"><button class="danger" id="wipeAll">Borrar todo el historial</button></div>`}
+
+function render(){
+  const ae=document.activeElement;
+  if(ae&&ae.tagName==="INPUT"&&$("view").contains(ae)){pending=true;return}
+  pending=false;
+  const sel=$("mes");sel.innerHTML=months().map(m=>`<option value="${m}"${m===ym?" selected":""}>${mlabel(m)}${m===CUR?" (actual)":""}</option>`).join("");
+  if($("eV").options.length!==ids.length)$("eV").innerHTML=ids.map((id,i)=>`<option value="${id}">${esc(nm(id,i))}</option>`).join("");
+  ids.forEach((id,i)=>{$("eV").options[i].textContent=nm(id,i)});
+  $("entForm").style.display=tab==="e"?"block":"none";
+  document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+  $("view").innerHTML=tab==="c"?viewC():tab==="e"?viewE():viewH();
+  $("note").textContent=tab==="e"?"* En su poder = todo lo entregado menos todo lo vendido, acumulado de todos los meses (las fichas que sobran pasan al mes siguiente).":"Cada mes nuevo empieza en 0 automáticamente; los meses anteriores quedan guardados en el historial.";
+}
+document.addEventListener("focusout",()=>setTimeout(()=>{if(pending)render()},50));
+
+function q(k,fn){chain[k]=(chain[k]||Promise.resolve()).then(fn).catch(e=>{$("status").textContent="No se pudo guardar (revisa conexión o permisos de edición).";console.error(e)})}
+function saveSale(id,patch){const k=ym+"_"+id,nx=Object.assign({ym,v:id},sale(ym,id),patch);st.ventas[k]=nx;render();if(db)q(k,()=>db.doc("ventas/"+k).set(nx))}
+function addSeller(){
+  const k=ids.length+1,id="v"+String(k).padStart(2,"0"),name="Vendedor "+k;
+  buildIds(k);st.names[id]=name;render();
+  if(db)q("addN",async()=>{await db.doc("vendedores/"+id).set({n:name});await db.doc("config/main").set({pct:st.pct0,n:k})});
+}
+const dirty={};
+async function saveNames(){
+  if(!db){alert("No hay conexión con la base de datos. Abre la página iniciando sesión en Claude.");return}
+  const inputs=[...document.querySelectorAll("#view input.name")];
+  const b=$("saveN");if(b){b.disabled=true;b.textContent="Guardando…"}
+  let ok=true;
+  for(const i of inputs){const id=i.dataset.id,n=i.value.trim()||"Sin nombre";st.names[id]=n;dirty[id]=1;
+    try{await db.doc("vendedores/"+id).set({n})}catch(e){ok=false;console.error(e)}delete dirty[id]}
+  const b2=$("saveN");if(b2){b2.disabled=false;b2.textContent=ok?"✓ Vendedores guardados":"No se pudo guardar"}
+  if(!ok)alert("No se pudo guardar. Es posible que solo tengas permiso de ver; pide permiso de Contributor o Editor.");
+  else setTimeout(()=>{const b3=$("saveN");if(b3)b3.textContent="💾 Guardar vendedores"},2500);
+}
+function wipeMonths(ms){
+  const S=new Set(ms),del=[];
+  Object.entries(st.ventas).forEach(([k,r])=>{if(S.has(r.ym)){del.push("ventas/"+k);delete st.ventas[k]}});
+  st.ent=st.ent.filter(e=>{if(S.has(e.ym)){del.push("entregas/"+e.id);return false}return true});
+  ms.forEach(m=>{if(st.meses[m]!=null){del.push("meses/"+m);delete st.meses[m]}});
+  if(!months().includes(ym)||S.has(ym))ym=CUR;
+  render();
+  if(db)del.forEach(p=>q("w"+p,()=>db.doc(p).delete()));
+}
+$("mes").onchange=e=>{ym=e.target.value;render()};
+document.querySelector(".tabs").onclick=e=>{const b=e.target.closest("button");if(b){tab=b.dataset.t;render()}};
+$("view").addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.d){const f=b.dataset.f;saveSale(b.dataset.id,{[f]:Math.max(0,sale(ym,b.dataset.id)[f]+Number(b.dataset.d))})}
+  else if(b.dataset.open){ym=b.dataset.open;tab="c";render()}
+  else if(b.id==="saveN")saveNames();
+  else if(b.id==="addN")addSeller();
+  else if(b.dataset.clr){if(confirm("¿Poner en 0 las fichas vendidas de este vendedor en "+mlabel(ym)+"?"))saveSale(b.dataset.clr,{a:0,b:0})}
+  else if(b.dataset.wipe){const m=b.dataset.wipe;if(confirm("¿Borrar TODOS los datos de "+mlabel(m)+" (ventas, entregas y comisión)? No se puede deshacer."))wipeMonths([m])}
+  else if(b.id==="wipeAll"){if(confirm("¿Borrar TODO el historial (todos los meses, ventas y entregas)? No se puede deshacer.")&&confirm("Última confirmación: se borrarán todos los meses. Los nombres de vendedores se conservan."))wipeMonths(months())}
+  else if(b.dataset.del&&db&&confirm("¿Borrar esta entrega?"))q("e"+b.dataset.del,()=>db.doc("entregas/"+b.dataset.del).delete());
+});
+$("view").addEventListener("change",e=>{
+  const i=e.target;if(i.id==="pct"){const p=Math.min(100,Math.max(0,Number(i.value)||0));st.meses[ym]=p;render();if(db)q("m"+ym,()=>db.doc("meses/"+ym).set({pct:p}));return}
+  if(!i.dataset.id)return;
+  if(i.dataset.f==="n"){const n=i.value.trim()||"Sin nombre";st.names[i.dataset.id]=n;dirty[i.dataset.id]=1;render();if(db)q("n"+i.dataset.id,()=>db.doc("vendedores/"+i.dataset.id).set({n}).then(()=>{delete dirty[i.dataset.id]}))}
+  else saveSale(i.dataset.id,{[i.dataset.f]:Math.max(0,Math.floor(Number(i.value)||0))});
+});
+$("eAdd").onclick=()=>{
+  const a=Math.max(0,Math.floor(Number($("eA").value)||0)),b=Math.max(0,Math.floor(Number($("eB").value)||0));
+  if(!db||(!a&&!b))return;
+  q("eadd",()=>db.collection("entregas").add({ym:CUR,v:$("eV").value,a,b,ts:Date.now()}));
+  $("eA").value=0;$("eB").value=0;
+};
+
+async function exportPdf(){
+  if(!window.jspdf){alert("No se pudo cargar el generador de PDF.");return}
+  const doc=new window.jspdf.jsPDF({orientation:"landscape"}),T=(s,y)=>{doc.setFontSize(14);doc.text(s,14,y)};
+  const tb=(head,body,foot,y)=>doc.autoTable({head:[head],body,foot:foot?[foot]:undefined,startY:y,styles:{fontSize:9},headStyles:{fillColor:[15,118,110]},footStyles:{fillColor:[230,244,242],textColor:20}});
+  let fn;
+  if(tab!=="h"){
+    const t=sums(ym);let xa=0,xb=0;st.ent.forEach(e=>{if(e.ym===ym){xa+=e.a;xb+=e.b}});
+    T("SISTEMA SAFRI - Reporte de fichas - "+mlabel(ym)+" (comision "+pct(ym)+"%)",16);
+    tb(["#","Vendedor","Entregadas $10","Entregadas $25","Vendidas $10","Vendidas $25","Total vendido","Comision","Neto SAFRI","En su poder $10/$25"],
+      ids.map((id,i)=>{const r=sale(ym,id),v=r.a*P10+r.b*P25,c=v*pct(ym)/100,e=ents(id,ym),ea=ents(id),sa=sold(id);return[i+1,nm(id,i),e.a,e.b,r.a,r.b,money(v),money(c),money(v-c),(ea.a-sa.a)+" / "+(ea.b-sa.b)]}),
+      ["","TOTAL",xa,xb,t.a,t.b,money(t.v),money(t.c),money(t.n),""],22);
+    doc.autoTable({head:[["Resumen del mes","Monto"]],body:[["Total vendido ("+t.a+" fichas de $10 y "+t.b+" de $25)",money(t.v)],["Comisiones a vendedores ("+pct(ym)+"%)",money(t.c)],["QUEDA PARA SAFRI",money(t.n)]],startY:doc.lastAutoTable.finalY+8,tableWidth:140,styles:{fontSize:11},headStyles:{fillColor:[15,118,110]},didParseCell:d=>{if(d.section==="body"&&d.row.index===2){d.cell.styles.fontStyle="bold";d.cell.styles.fillColor=[230,244,242]}}});
+    const l=st.ent.filter(e=>e.ym===ym).sort((a,b)=>a.ts-b.ts);
+    if(l.length){doc.text("Detalle de fichas entregadas",14,doc.lastAutoTable.finalY+10);tb(["Fecha","Vendedor","$10","$25"],l.map(e=>[fdate(e.ts),nm(e.v,ids.indexOf(e.v)),e.a,e.b]),null,doc.lastAutoTable.finalY+14)}
+    fn="reporte-"+ym}
+  else if(0){const t=sums(ym);T("Cuentas de fichas - "+mlabel(ym)+" (comision "+pct(ym)+"%)",16);
+    tb(["#","Vendedor","Fichas $10","Fichas $25","Vendido","Comision","Neto"],ids.map((id,i)=>{const r=sale(ym,id),v=r.a*P10+r.b*P25,c=v*pct(ym)/100;return[i+1,nm(id,i),r.a,r.b,money(v),money(c),money(v-c)]}),["","TOTAL",t.a,t.b,money(t.v),money(t.c),money(t.n)],22);fn="cuentas-"+ym}
+  else if(tab==="e"){T("Entregas de fichas - "+mlabel(ym),16);
+    tb(["Vendedor","Entregadas $10","Entregadas $25","Vendidas $10","Vendidas $25","En su poder $10","En su poder $25"],ids.map((id,i)=>{const e=ents(id,ym),s=sold(id,ym),ea=ents(id),sa=sold(id);return[nm(id,i),e.a,e.b,s.a,s.b,ea.a-sa.a,ea.b-sa.b]}),null,22);
+    const l=st.ent.filter(e=>e.ym===ym).sort((a,b)=>a.ts-b.ts);
+    doc.text("Detalle de entregas",14,doc.lastAutoTable.finalY+10);
+    tb(["Fecha","Vendedor","$10","$25"],l.map(e=>[fdate(e.ts),nm(e.v,ids.indexOf(e.v)),e.a,e.b]),null,doc.lastAutoTable.finalY+14);fn="entregas-"+ym}
+  else{T("SISTEMA SAFRI - Historial mensual",16);
+    tb(["Mes","Fichas $10","Fichas $25","Venta","Comision","Neto SAFRI"],months().map(m=>{const t=sums(m);return[mlabel(m),t.a,t.b,money(t.v),money(t.c),money(t.n)]}),null,22);fn="historial"}
+  try{if(!dl)throw 0;await dl.save({filename:fn+".pdf",data:doc.output("blob")})}catch(e){if(e&&e.code==="declined")return;doc.save(fn+".pdf")}
+}
+$("pdf").onclick=exportPdf;
+
+const SUPABASE_URL= "sjoeoaxmmkwpktvujsgo",SUPABASE_KEY="sb_publishable_eep-KLvDleoBiKgHlyNkTw_hEu8yuou";
+function mkDB(sb){
+  const cache={},subs={},loading={},rid=()=>crypto.randomUUID().replace(/-/g,"").slice(0,20);
+  const fire=c=>(subs[c]||[]).forEach(f=>f());
+  const load=async c=>{const{data,error}=await sb.from("docs").select("id,data").eq("col",c);if(error)throw error;cache[c]={};data.forEach(r=>cache[c][r.id]=r.data);fire(c)};
+  sb.channel("docs").on("postgres_changes",{event:"*",schema:"public",table:"docs"},p=>{
+    const r=p.eventType==="DELETE"?p.old:p.new;if(!r||!cache[r.col])return;
+    if(p.eventType==="DELETE")delete cache[r.col][r.id];else cache[r.col][r.id]=r.data;fire(r.col)}).subscribe();
+  const dsnap=(c,id)=>{const d=cache[c]&&cache[c][id];return{id,exists:d!==undefined,data:()=>d,metadata:{fromCache:false}}};
+  const csnap=c=>{const k=Object.keys(cache[c]||{}).sort();return{docs:k.map(i=>dsnap(c,i)),size:k.length,metadata:{fromCache:false}}};
+  const sub=(c,mk,cb,err)=>{(subs[c]=subs[c]||new Set());const f=()=>cb(mk());subs[c].add(f);
+    if(!loading[c])loading[c]=load(c).catch(e=>{err&&err(e)});else if(cache[c])f();return()=>subs[c].delete(f)};
+  const dref=(c,id)=>({id,path:c+"/"+id,
+    set:async data=>{const{error}=await sb.from("docs").upsert({col:c,id,data});if(error)throw error;if(cache[c]){cache[c][id]=data;fire(c)}},
+    delete:async()=>{const{error}=await sb.from("docs").delete().eq("col",c).eq("id",id);if(error)throw error;if(cache[c]){delete cache[c][id];fire(c)}},
+    onSnapshot:(cb,err)=>sub(c,()=>dsnap(c,id),cb,err)});
+  return{doc:p=>{const i=p.indexOf("/");return dref(p.slice(0,i),p.slice(i+1))},
+    collection:c=>({doc:id=>dref(c,id||rid()),add:async d=>{const r=dref(c,rid());await r.set(d);return r},onSnapshot:(cb,err)=>sub(c,()=>csnap(c),cb,err)})};
+}
+async function startDb(){
+  if(SUPABASE_URL.startsWith("PEGA")){setStatus(false,"Falta configurar Supabase (ver LEEME.md)");return null}
+  const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  const{data:{session}}=await sb.auth.getSession();
+  if(!session)await new Promise(res=>{$("login").style.display="flex";$("lf").onsubmit=async e=>{e.preventDefault();
+    const{error}=await sb.auth.signInWithPassword({email:$("lE").value.trim(),password:$("lP").value});
+    if(error){$("lM").textContent="Correo o contraseña incorrectos";return}$("login").style.display="none";res()}});
+  return mkDB(sb);
+}
+
+function setStatus(ok,m){$("dot").className="dot"+(ok?" on":"");$("status").textContent=m}
+(async()=>{
+  render();
+  const timer=setTimeout(()=>{if(!loaded)setStatus(false,"No se alcanzan los datos todavía…")},10000);
+  try{
+    db=await startDb();dl=null;
+    if(!db){clearTimeout(timer);setStatus(false,"No se pudo conectar a la base de datos.");return}
+    const er=e=>{clearTimeout(timer);setStatus(false,"Error al leer datos: "+(e&&e.code||"desconocido"))};
+    const sub=(col,fn)=>db.collection(col).onSnapshot(s=>{fn(s);if(!s.metadata.fromCache){loaded=true;clearTimeout(timer);setStatus(true,"En vivo")}render()},er);
+    sub("vendedores",s=>{const mx=Math.max(0,...s.docs.map(d=>parseInt(d.id.slice(1))||0));if(mx>ids.length)buildIds(mx);s.docs.forEach(d=>{if(d.exists&&d.data().n&&!dirty[d.id])st.names[d.id]=d.data().n})});
+    sub("ventas",s=>{st.ventas={};s.docs.forEach(d=>{if(d.exists)st.ventas[d.id]=Object.assign({a:0,b:0},d.data())})});
+    sub("entregas",s=>{st.ent=s.docs.filter(d=>d.exists).map(d=>Object.assign({},d.data(),{id:d.id}))});
+    sub("meses",s=>{st.meses={};s.docs.forEach(d=>{if(d.exists&&typeof d.data().pct==="number")st.meses[d.id]=d.data().pct})});
+    db.doc("config/main").onSnapshot(d=>{if(d.exists){const x=d.data();if(typeof x.pct==="number")st.pct0=x.pct;if(typeof x.n==="number"&&x.n>ids.length)buildIds(x.n);render()}});
+  }catch(e){clearTimeout(timer);setStatus(false,"Error de conexión.")}
+})();
+</script>
+</body>
+</html>
